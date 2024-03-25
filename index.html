@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+</head>
+<body bgcolor="BLACK" TEXT="WHITE">
+<canvas id='mycanvas' style="display:none;border:1px solid #000000;">
+</canvas>
+
+
+<div id="text" style="font-size:100px">
+
+<div id="splash" style="font-size:100px"> CSUSM Parking Patrol Simulator <br> Count all illegal vehichles (anything that is not a car or motorcycle) before time runs out... <br> enter = +1 <br> backspace = -1 <br>
+<img src="imgs/csusmparkin.jpg">
+</div>
+<div id = "countdown" style="font-size:100px"></div>
+<div id = "playercount" style="font-size:100px"></div>
+<button id = "but_cont" onclick="key_input('continue');" style="font-size: 100px;display:none">Continue</button>
+
+
+
+<script>
+const canvas = document.querySelector("canvas");
+
+resize()
+window.addEventListener('resize', resize)
+
+var current_state;
+var game_data;
+var carCount = 0; //player count 
+var actualCount = 37; //num of illegal cars in the parking structure
+
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  try{
+    draw(game_data['states'][current_state]['bk_img_loaded']);
+  }catch(err){
+   }
+
+}
+
+$.getJSON( "data/map.json", function( data ) {
+        game_data = data;
+        current_state = data['start_state'];
+        load_imgs();
+
+});
+
+
+
+
+function all_loaded(){
+    draw(game_data['states']['1,-1-n']['bk_img_loaded']); 
+    console.log(current_state);
+    setTimeout(function(){
+        document.getElementById("playercount").innerHTML = "count: " + carCount;
+        //$('#playercount').show();
+        $('#splash').hide();
+        $('#mycanvas').show();
+        //for countdown timer
+        var count = 120, timer = setInterval(function() {
+            $("#counter").html(count--);
+            document.getElementById("countdown").innerHTML = "Time: " + count;
+            if(count == 0){
+                $('#mycanvas').hide();
+                clearInterval(timer);
+                document.getElementById("countdown").innerHTML = "Times Up"
+                $('#countdown').show() 
+                if(carCount == actualCount){
+                    document.getElementById("text").innerHTML = "You found all illegal vehichles. <br> You Win!";
+                }else
+                {
+                    document.getElementById("text").innerHTML = "You failed to give tickets to all illegal vehichles. <br> You Lose!";
+                }
+            }     
+        }, 1000);
+    },10000);
+}
+
+function load_imgs(){
+    for (var key in game_data['states']){
+        if(game_data['states'][key]['bk_img'] != null){
+            console.log( key, game_data['states'][key]['bk_img'] );
+            game_data['states'][key]['bk_img_loaded'] = new Image();
+            game_data['states'][key]['bk_img_loaded'].src = game_data['states'][key]['bk_img']; 
+        }
+    }
+    all_loaded();
+}
+
+const up_arrow = 38;
+const down_arrow = 40;
+const left_arrow = 37;
+const right_arrow = 39;
+const enter = 13;
+const backspace = 8;
+
+var cur_pos_x = 0;
+var cur_pos_y = 0;
+
+
+document.body.onkeydown = function(e){
+    if(e.keyCode == up_arrow){
+        cur_pos_x = cur_pos_x +1;
+    }
+    if(e.keyCode == enter){
+        carCount = carCount + 1;
+        document.getElementById("playercount").innerHTML = "count: " + carCount;
+        console.log(carCount);
+    }
+    if(e.keyCode == backspace){
+        carCount = carCount - 1;
+        document.getElementById("playercount").innerHTML = "count: " + carCount;  
+        console.log(carCount); 
+    }
+   //alert(String.from  CharCode(e.keyCode)+" --> "+e.keyCode);
+    key_input(e.keyCode)
+
+};
+
+function key_input(what_key){
+    for(i=0; i< game_data['states'][current_state]['next_state'].length; i++){
+        if( what_key == game_data['states'][current_state]['next_state'][i]['key_input']) {
+            if ( typeof game_data['states'][current_state]['next_state'][i]['state_name'] == "string"){
+               next_state(game_data['states'][current_state]['next_state'][i]['state_name'])
+            }
+            break
+        } 
+    }
+
+    console.log(what_key);
+}
+
+function next_state( state) {
+    console.log("Current State = " + current_state + " --> New State= " + state) 
+    current_state = state
+
+    draw(game_data['states'][current_state]['bk_img_loaded'])
+    if(game_data['states'][current_state]['other_imgs'] != null){
+        for(i=0; i<game_data['states'][current_state]['other_imgs'].length;i++){
+            console.log( game_data['states'][current_state]['other_imgs'][i]['src']);
+            draw_src( game_data['states'][current_state]['other_imgs'][i]['src'],
+                    game_data['states'][current_state]['other_imgs'][i]['x_cord'],
+                    game_data['states'][current_state]['other_imgs'][i]['y_cord'],
+                    game_data['states'][current_state]['other_imgs'][i]['width'],
+                    game_data['states'][current_state]['other_imgs'][i]['height']);
+        }
+    }
+}
+
+function draw(img) {
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0,  canvas.width,  canvas.height);
+}
+
+function draw_src(src, x, y, w, h) {
+  var ctx = canvas.getContext('2d');
+  var img = new Image();
+  img.onload = function() {
+    ctx.drawImage(img, x, y, w, h);
+  };
+  img.src = src;
+}
+
+
+</script>
+
+</body>
+</html>
+
